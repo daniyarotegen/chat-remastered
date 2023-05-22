@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from chatrooms.views import ProfileView, UserListView, ChatsView
+from chatrooms.views import ProfileView, UserListView, ChatsView, CreateGroupChatView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,4 +25,5 @@ urlpatterns = [
     path('chats/', ChatsView.as_view(), name='chats'),
     path('chat/', include('chatrooms.urls')),
     path("profile/", ProfileView.as_view(), name="profile"),
+    path('create_group_chat/', CreateGroupChatView.as_view(), name='create_group_chat'),
 ]

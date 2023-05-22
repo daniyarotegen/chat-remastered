@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
+from .forms import GroupChatForm
 from .models import ChatRoom, Chat
 from django.contrib.auth.models import User
 
@@ -60,3 +61,28 @@ class UserListView(LoginRequiredMixin, View):
 class ProfileView(LoginRequiredMixin, View):
     def get(self, request):
         return render(request, 'chatrooms/profile.html')
+
+
+class CreateGroupChatView(LoginRequiredMixin, View):
+    def get(self, request):
+        form = GroupChatForm()
+        form.fields['users'].queryset = User.objects.exclude(id=request.user.id)
+        return render(request, 'chatrooms/create_group_chat.html', {'form': form})
+
+    def post(self, request):
+        form = GroupChatForm(request.POST)
+        form.fields['users'].queryset = User.objects.exclude(id=request.user.id)
+        if form.is_valid():
+            users = form.cleaned_data['users']
+            users = list(users) + [request.user]
+            users_ids = sorted([user.id for user in users])
+            room_name = '_'.join(map(str, users_ids))
+            room, created = ChatRoom.objects.get_or_create(
+                name=room_name,
+                defaults={'is_group': True}
+            )
+            for user in users:
+                room.users.add(user)
+            return redirect(reverse('room', args=[room_name]))
+        return render(request, 'chatrooms/create_group_chat.html', {'form': form})
+
