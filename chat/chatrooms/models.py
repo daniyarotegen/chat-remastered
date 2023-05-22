@@ -17,6 +17,7 @@ class Chat(models.Model):
 
 class ChatRoom(models.Model):
     name = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
     chat_type = models.CharField(
         max_length=7,
         choices=[(tag.name, tag.value) for tag in ChatType],

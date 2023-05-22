@@ -79,14 +79,15 @@ class CreateGroupChatView(LoginRequiredMixin, View):
         if form.is_valid():
             users = form.cleaned_data['users']
             users = list(users) + [request.user]
-            users_ids = sorted([user.id for user in users])
-            room_name = '_'.join(map(str, users_ids))
+            name = form.cleaned_data['name']
+            description = form.cleaned_data.get('description', '')
             room, created = ChatRoom.objects.get_or_create(
-                name=room_name,
-                defaults={'is_group': True}
+                name=name,
+                defaults={'is_group': True, 'description': description}
             )
             for user in users:
                 room.users.add(user)
-            return redirect(reverse('room', args=[room_name]))
+            return redirect(reverse('room', args=[name]))
         return render(request, 'chatrooms/create_group_chat.html', {'form': form})
+
 
