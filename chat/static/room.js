@@ -1,5 +1,6 @@
 const chatLog = document.querySelector('#chat-log')
 const roomName = JSON.parse(document.getElementById('room-name').textContent);
+const isGroupChat = JSON.parse(document.getElementById('is-group-chat').textContent);
 
 if (chatLog.childNodes.length <= 1) {
     const emptyText = document.createElement('h3')
@@ -13,6 +14,7 @@ const chatSocket = new WebSocket(
     'ws://'
     + window.location.host
     + '/ws/chat/'
+    + (isGroupChat ? 'group-' : 'private-')
     + roomName
     + '/'
 );

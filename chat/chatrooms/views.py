@@ -1,5 +1,6 @@
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import ChatRoom, Chat
@@ -11,6 +12,21 @@ class Index(LoginRequiredMixin, View):
         return render(request, 'chatrooms/index.html')
 
 
+class StartChatView(LoginRequiredMixin, View):
+    def get(self, request, username):
+        other_user = User.objects.get(username=username)
+        if not other_user:
+            return HttpResponse("User not found", status=404)
+        room_name = '_'.join(sorted([str(request.user.id), str(other_user.id)]))
+        room, created = ChatRoom.objects.get_or_create(
+            name=room_name,
+            defaults={'is_group': False}
+        )
+        room.users.add(request.user)
+        room.users.add(other_user)
+        return redirect(reverse('room', args=[room_name]))
+
+
 class ChatsView(LoginRequiredMixin, View):
     def get(self, request):
         chatrooms = ChatRoom.objects.filter(chat__user=request.user).distinct()
@@ -19,29 +35,20 @@ class ChatsView(LoginRequiredMixin, View):
             chat = room.chat_set.order_by('-timestamp').first()
             recipient_id = list(set(room.name.split("_")) - {str(request.user.id)})[0]
             recipient = User.objects.get(id=recipient_id)
-            chats_with_recipients.append({'chat': chat, 'recipient': recipient})
+            chats_with_recipients.append({'chat': chat, 'recipient': recipient, 'room_name': room.name})
         return render(request, 'chatrooms/chats.html', {'chats_with_recipients': chats_with_recipients})
 
 
 class Room(LoginRequiredMixin, View):
     def get(self, request, room_name):
-        recipient_user = User.objects.filter(username=room_name).first()
-        if not recipient_user:
-            return HttpResponse("User not found", status=404)
-
-        room_name = "_".join(sorted([str(request.user.id), str(recipient_user.id)]))
-
         room = ChatRoom.objects.filter(name=room_name).first()
-        chats = []
+        if room is None:
+            return HttpResponse("Room not found", status=404)
 
-        if not room:
-            room = ChatRoom(name=room_name)
-            room.save()
+        chats = Chat.objects.filter(room=room).order_by('-timestamp')
 
-        if room:
-            chats = Chat.objects.filter(room=room).order_by('-timestamp')
-
-        return render(request, 'chatrooms/room.html', {'room_name': room_name, 'chats': chats})
+        return render(request, 'chatrooms/room.html',
+                      {'room_name': room_name, 'chats': chats, 'is_group_chat': room.is_group_chat()})
 
 
 class UserListView(LoginRequiredMixin, View):
